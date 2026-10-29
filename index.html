@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi HSK 3 - Game Interaktif</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', 'SimSun', 'STSong', 'Songti SC', serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #fbcfe8 100%);
+            min-height: 100vh;
+        }
+
+        .zh-text {
+            font-family: 'SimSun', 'Songti SC', 'STSong', serif;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.locked {
+            filter: grayscale(85%);
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .tab-btn.active {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            transform: translateX(6px);
+        }
+
+        @keyframes bounce-subtle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        .animate-bounce-subtle {
+            animation: bounce-subtle 2s infinite;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.4); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 10px; }
+    </style>
+</head>
+<body class="p-2 sm:p-4 text-slate-800">
+
+    <div class="max-w-6xl mx-auto min-h-[92vh] flex flex-col">
+        <!-- Header & Top Stats -->
+        <header class="glass-panel rounded-2xl p-4 mb-4 flex flex-wrap justify-between items-center gap-3 border-b-4 border-sky-300">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-sky-500 text-white rounded-2xl flex items-center justify-center text-2xl font-bold shadow-md">
+                    考
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-wide zh-text">
+                        新汉语水平考试 HSK (三级) by lcnpalembang
+                    </h1>
+                    <p class="text-xs sm:text-sm text-sky-600 font-bold">
+                        ✨ Game Pembelajaran Gamifikasi Interaktif
+                    </p>
+                </div>
+            </div>
+
+            <!-- Timers & Scores -->
+            <div class="flex flex-wrap items-center gap-3 bg-white/90 px-4 py-2 rounded-xl shadow-inner border border-sky-100">
+                <!-- Timer Display -->
+                <div class="text-center px-2">
+                    <span class="text-[10px] text-gray-500 block font-bold uppercase">Waktu Tersisa</span>
+                    <span id="timer-display" class="text-lg font-black text-rose-500 flex items-center gap-1">
+                        <i class="fa-regular fa-clock"></i> <span id="timer-text">35:00</span>
+                    </span>
+                </div>
+                <div class="h-8 w-px bg-gray-200"></div>
+
+                <!-- Scores Breakdown -->
+                <div class="text-center px-2">
+                    <span class="text-[10px] text-gray-500 block font-bold uppercase">Skor Akhir (Max 300)</span>
+                    <span id="score-display" class="text-lg font-black text-amber-500 flex items-center gap-1">
+                        <i class="fa-solid fa-trophy text-amber-400"></i> <span id="current-score">0</span> / 300
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 flex-grow">
+            
+            <!-- Sidebar Left (3 Tabs) -->
+            <div class="md:col-span-3 flex flex-col gap-3">
+                <div class="glass-panel p-3 rounded-2xl flex flex-col gap-3 h-full">
+                    <h2 class="text-xs font-black uppercase text-slate-400 px-2 tracking-wider">Modul Ujian</h2>
+                    
+                    <!-- Tab Listening -->
+                    <button id="tab-listening" onclick="switchTab('listening')" 
+                        class="tab-btn active w-full p-3 sm:p-4 rounded-xl flex items-center justify-between text-left font-extrabold bg-gradient-to-r from-sky-400 to-blue-500 text-white shadow-md">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-headphones text-2xl"></i>
+                            <div>
+                                <span class="text-xl zh-text block leading-none">听力</span>
+                                <span class="text-xs font-normal opacity-90">35 Min • 100 Poin</span>
+                            </div>
+                        </div>
+                        <i id="icon-listening" class="fa-solid fa-circle-play text-xl"></i>
+                    </button>
+
+                    <!-- Tab Reading -->
+                    <button id="tab-reading" onclick="switchTab('reading')" 
+                        class="tab-btn locked w-full p-3 sm:p-4 rounded-xl flex items-center justify-between text-left font-extrabold bg-gradient-to-r from-amber-400 to-orange-400 text-white">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-book-open text-2xl"></i>
+                            <div>
+                                <span class="text-xl zh-text block leading-none">阅读</span>
+                                <span class="text-xs font-normal opacity-90">30 Min • 100 Poin</span>
+                            </div>
+                        </div>
+                        <i id="icon-reading" class="fa-solid fa-lock text-xl"></i>
+                    </button>
+
+                    <!-- Tab Writing -->
+                    <button id="tab-writing" onclick="switchTab('writing')" 
+                        class="tab-btn locked w-full p-3 sm:p-4 rounded-xl flex items-center justify-between text-left font-extrabold bg-gradient-to-r from-purple-400 to-pink-500 text-white">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-pen-nib text-2xl"></i>
+                            <div>
+                                <span class="text-xl zh-text block leading-none">书写</span>
+                                <span class="text-xs font-normal opacity-90">10 Min • 100 Poin</span>
+                            </div>
+                        </div>
+                        <i id="icon-writing" class="fa-solid fa-lock text-xl"></i>
+                    </button>
+
+                    <!-- Explanation Tab Button -->
+                    <button id="tab-explanation" onclick="switchTab('explanation')" hidden
+                        class="tab-btn w-full p-3 sm:p-4 rounded-xl flex items-center justify-between text-left font-extrabold bg-gradient-to-r from-emerald-400 to-green-600 text-white animate-bounce-subtle shadow-lg">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-graduation-cap text-2xl"></i>
+                            <div>
+                                <span class="text-xl zh-text block leading-none">解析</span>
+                                <span class="text-xs font-normal opacity-90">Pembahasan Lengkap</span>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-star text-xl text-yellow-300"></i>
+                    </button>
+
+                    <!-- Modul Score Subtotal Board -->
+                    <div class="mt-auto bg-white/70 rounded-xl p-3 border border-slate-200 text-xs font-medium space-y-1">
+                        <div class="flex justify-between"><span>听力:</span><span id="score-listening-sub" class="font-bold text-sky-600">0 / 100</span></div>
+                        <div class="flex justify-between"><span>阅读:</span><span id="score-reading-sub" class="font-bold text-amber-600">0 / 100</span></div>
+                        <div class="flex justify-between"><span>书写:</span><span id="score-writing-sub" class="font-bold text-purple-600">0 / 100</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Interactive Main Panel -->
+            <div class="md:col-span-9 flex flex-col">
+                <div class="glass-panel p-4 sm:p-6 rounded-2xl h-full flex flex-col relative overflow-hidden">
+                    
+                    <!-- TAB CONTENT: LISTENING -->
+                    <div id="content-listening" class="tab-content flex-grow flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-sky-700 flex items-center gap-2">
+                                <i class="fa-solid fa-headphones"></i> 第一部分: 听力 (Listening Practice)
+                            </h3>
+                            <span class="text-xs bg-sky-100 text-sky-800 px-3 py-1 rounded-full font-bold">
+                                Soal <span id="listening-q-num">1</span> dari 10
+                            </span>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex-grow flex flex-col justify-between">
+                            <div id="listening-q-container"></div>
+                            <div id="listening-options" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4"></div>
+
+                            <div class="mt-6 flex justify-end">
+                                <button id="btn-next-listening" onclick="nextListeningQuestion()" disabled
+                                    class="px-6 py-2.5 bg-gray-300 text-gray-500 font-bold rounded-xl shadow transition opacity-50 cursor-not-allowed">
+                                    Soal Berikutnya <i class="fa-solid fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB CONTENT: READING -->
+                    <div id="content-reading" class="tab-content hidden flex-grow flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-amber-700 flex items-center gap-2">
+                                <i class="fa-solid fa-book-open"></i> 第二部分: 阅读 (Reading Practice)
+                            </h3>
+                            <span class="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-bold">
+                                Soal <span id="reading-q-num">1</span> dari 10
+                            </span>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex-grow flex flex-col justify-between">
+                            <div id="reading-q-container"></div>
+                            <div id="reading-options" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4"></div>
+
+                            <div class="mt-6 flex justify-end">
+                                <button id="btn-next-reading" onclick="nextReadingQuestion()" disabled
+                                    class="px-6 py-2.5 bg-gray-300 text-gray-500 font-bold rounded-xl shadow transition opacity-50 cursor-not-allowed">
+                                    Soal Berikutnya <i class="fa-solid fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB CONTENT: WRITING -->
+                    <div id="content-writing" class="tab-content hidden flex-grow flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-purple-700 flex items-center gap-2">
+                                <i class="fa-solid fa-pen-nib"></i> 第三部分: 书写 (Writing Practice)
+                            </h3>
+                            <span class="text-xs bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-bold">
+                                Soal <span id="writing-q-num">1</span> dari 10
+                            </span>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex-grow flex flex-col justify-between">
+                            <div id="writing-q-container"></div>
+                            <div id="writing-interactive-area" class="mt-4"></div>
+
+                            <div class="mt-6 flex justify-end">
+                                <button id="btn-next-writing" onclick="nextWritingQuestion()" disabled
+                                    class="px-6 py-2.5 bg-gray-300 text-gray-500 font-bold rounded-xl shadow transition opacity-50 cursor-not-allowed">
+                                    Soal Berikutnya <i class="fa-solid fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB CONTENT: EXPLANATION -->
+                    <div id="content-explanation" class="tab-content hidden flex-grow flex-col">
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-4 text-center">
+                            <h2 class="text-2xl font-black text-emerald-800 mb-1">🎉 SELAMAT! UJIAN SELESAI 🎉</h2>
+                            <p class="text-sm text-emerald-700">Berikut adalah rekap Kunci Jawaban Lengkap beserta Pinyin dan Terjemahan Indonesia:</p>
+                        </div>
+
+                        <div id="explanation-list" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2"></div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 transform transition-all scale-95" id="modal-card">
+            <div id="modal-icon" class="text-5xl mb-3"></div>
+            <h3 id="modal-title" class="text-2xl font-black mb-2"></h3>
+            <p id="modal-msg" class="text-sm text-slate-600 mb-4 font-medium zh-text"></p>
+            <button onclick="closeModal()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg">
+                Lanjutkan 🚀
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           DATA SOAL UJIAN HSK 3 (H31001) - 100 POIN PER MODUL
+           Pilihan Jawaban Murni Hanzi / Huruf
+           ========================================================================== */
+
+        // 1. LISTENING DATA (10 Soal Sampel Kunci Resmi - Total Bobot 100 Poin = 10 Poin / Soal)
+        const listeningQuestions = [
+            {
+                id: 1,
+                promptText: "女：你一直看手表，有什么着急的事情吗？\n男：我九点前必须回到办公室，经理有事情找我，再见。",
+                question: "根据对话，判断男的现在要做什么？",
+                options: [
+                    { key: "A", text: "去医院", correct: false },
+                    { key: "B", text: "回办公室", correct: true },
+                    { key: "C", text: "去超市", correct: false }
+                ],
+                pinyin: "Nǚ: Nǐ yìzhí kàn shǒubiǎo... Nán: Wǒ jiǔ diǎn qián bìxū huí dào bànɡōngshì...",
+                meaning: "Wanita: Kamu terus melihat jam. Pria: Saya harus kembali ke kantor sebelum jam 9.",
+                explanation: "Pria mengatakan harus kembali ke kantor (回办公室). Jawaban benar: B."
+            },
+            {
+                id: 2,
+                promptText: "男：你想什么呢？要出去吗？\n女：明天同学结婚，我在想穿哪双鞋好呢。",
+                question: "女的在想什么？",
+                options: [
+                    { key: "A", text: "买什么礼物", correct: false },
+                    { key: "B", text: "去哪里结婚", correct: false },
+                    { key: "C", text: "穿哪双鞋", correct: true }
+                ],
+                pinyin: "Míngtiān tóngxué jiéhūn, wǒ zài xiǎng chuān nǎ shuāng xié hǎo ne.",
+                meaning: "Besok teman menikah, saya sedang berpikir mau pakai sepatu yang mana.",
+                explanation: "Wanita memikirkan sepatu yang mau dipakai (穿哪双鞋). Jawaban benar: C."
+            },
+            {
+                id: 3,
+                promptText: "男：这个电子词典的作用大不大？\n女：很大，我做练习的时候，它很有帮助。",
+                question: "关于电子词典，可以知道什么？",
+                options: [
+                    { key: "A", text: "很有帮助", correct: true },
+                    { key: "B", text: "太贵了", correct: false },
+                    { key: "C", text: "买不到了", correct: false }
+                ],
+                explanation: "Wanita menyebut kamus elektronik sangat membantu (很有帮助). Jawaban benar: A."
+            },
+            {
+                id: 4,
+                promptText: "男：眼镜，帽子，地图，啤酒，一个也不能少。\n女：好了，准备得很认真，我相信你已经准备好了。",
+                question: "根据对话，可以知道什么？",
+                options: [
+                    { key: "A", text: "准备好了", correct: true },
+                    { key: "B", text: "找不到地图", correct: false },
+                    { key: "C", text: "不想去了", correct: false }
+                ],
+                explanation: "Wanita berkata '我相信你已经准备好了'. Jawaban benar: A."
+            },
+            {
+                id: 5,
+                promptText: "我以前以为北京话就是普通话，到北京两年后，我才发现不是这样的。\n★ 北京话和普通话是相同的。",
+                question: "判断对错 (Benar / Salah):",
+                type: "tf",
+                answer: false,
+                pinyin: "Běijīnghuà hé pǔtōnghuà shì xiāngtóng de.",
+                explanation: "Teks menyatakan bahwa dialek Beijing dan Mandarin standar tidak sama. Pernyataan SALAH (错)."
+            },
+            {
+                id: 6,
+                promptText: "你明天到办公室找我，我在七零七；如果我不在，你就上八楼，到八零三会议室找我。\n★ 会议室在八层。",
+                question: "判断对错 (Benar / Salah):",
+                type: "tf",
+                answer: true,
+                explanation: "Teks menyebutkan kamar 803 di lantai 8 (八楼). Pernyataan BENAR (对)."
+            },
+            {
+                id: 7,
+                promptText: "女：大家都很关心您的身体，现在好些了吗？\n男：没事，不用担心。就是感冒发烧，很快就会好的。\n问：男的怎么了？",
+                question: "男的怎么了？",
+                options: [
+                    { key: "A", text: "迟到了", correct: false },
+                    { key: "B", text: "生病了", correct: true },
+                    { key: "C", text: "生气了", correct: false }
+                ],
+                explanation: "Pria mengalami flu dan demam (感冒发烧), artinya dia sedang sakit (生病了). Jawaban: B."
+            },
+            {
+                id: 8,
+                promptText: "男：服务员，我房间里的灯坏了。\n女：好的，先生，我马上让人来换一个。\n问：他们最可能在哪里？",
+                question: "他们最可能在哪里？",
+                options: [
+                    { key: "A", text: "教室", correct: false },
+                    { key: "B", text: "机场", correct: false },
+                    { key: "C", text: "宾馆", correct: true }
+                ],
+                explanation: "Memanggil pelayan kamar karena lampu kamar rusak terjadi di hotel (宾馆). Jawaban: C."
+            },
+            {
+                id: 9,
+                promptText: "女：真奇怪，动物园里今天怎么这么安静？\n男：大家都在那边儿看新来的大熊猫呢。\n问：关于大熊猫，可以知道什么？",
+                question: "关于大熊猫，可以知道什么？",
+                options: [
+                    { key: "A", text: "有两只", correct: false },
+                    { key: "B", text: "爱跳舞", correct: false },
+                    { key: "C", text: "是新来的", correct: true }
+                ],
+                explanation: "Pria menyebutkan '新来的大熊猫' (Panda raksasa yang baru datang). Jawaban: C."
+            },
+            {
+                id: 10,
+                promptText: "男：刚才天气多好啊，突然就刮起大风了。\n女：北方的秋天就是这样的。\n问：他们在说什么？",
+                question: "他们在说什么？",
+                options: [
+                    { key: "A", text: "习惯", correct: false },
+                    { key: "B", text: "天气", correct: true },
+                    { key: "C", text: "文化", correct: false }
+                ],
+                explanation: "Percakapan membahas tentang angin kencang dan musim gugur (cuaca / 天气). Jawaban: B."
+            }
+        ];
+
+        // 2. READING DATA (10 Soal - Bobot 100 Poin = 10 Poin / Soal)
+        const readingQuestions = [
+            {
+                id: 1,
+                prompt: "我的作业早就完成了。(PR saya sudah selesai dari tadi.)",
+                question: "选择合适的答语 (Pilih pasangan kalimat):",
+                options: [
+                    { key: "A", text: "你可以休息了", correct: false },
+                    { key: "B", text: "你最好再检查一下", correct: true },
+                    { key: "C", text: "太贵了", correct: false }
+                ],
+                pinyin: "Nǐ zuìhǎo zài jiǎnchá yíxià.",
+                meaning: "Sebaiknya kamu periksa sekali lagi.",
+                explanation: "Pasangan yang sesuai untuk PR yang sudah selesai adalah menyuruh memeriksa ulang (你最好再检查一下). Jawaban: B."
+            },
+            {
+                id: 2,
+                prompt: "电影马上就要开始了，( ___ ) 手机关了吧。",
+                question: "选择合适的词语填空 (Pilih kata pengisi):",
+                options: [
+                    { key: "A", text: "把", correct: true },
+                    { key: "B", text: "被", correct: false },
+                    { key: "C", text: "向", correct: false }
+                ],
+                explanation: "Struktur tata bahasa '把手机关了' menggunakan kata 把. Jawaban: A."
+            },
+            {
+                id: 3,
+                prompt: "他很高，这张桌子太低，坐着很不 ( ___ )。",
+                question: "选择合适的词语填空:",
+                options: [
+                    { key: "A", text: "方便", correct: false },
+                    { key: "B", text: "舒服", correct: true },
+                    { key: "C", text: "清楚", correct: false }
+                ],
+                explanation: "Meja terlalu rendah membuat duduk menjadi tidak nyaman (不舒服). Jawaban: B."
+            },
+            {
+                id: 4,
+                prompt: "您可以选择火车站 ( ___ ) 的宾馆，住那儿会更方便。",
+                question: "选择合适的词语填空:",
+                options: [
+                    { key: "A", text: "附近", correct: true },
+                    { key: "B", text: "中间", correct: false },
+                    { key: "C", text: "地方", correct: false }
+                ],
+                explanation: "Hotel di dekat stasiun kereta api (火车站附近). Jawaban: A."
+            },
+            {
+                id: 5,
+                prompt: "天气冷，你多穿点儿衣服，小心 ( ___ )。",
+                question: "选择合适的词语填空:",
+                options: [
+                    { key: "A", text: "发烧", correct: false },
+                    { key: "B", text: "感冒", correct: true },
+                    { key: "C", text: "生病", correct: false }
+                ],
+                explanation: "Cuaca dingin perlu pakai banyak baju agar tidak kena flu (小心感冒). Jawaban: B."
+            },
+            {
+                id: 6,
+                prompt: "人们常说：今天工作不努力，明天努力找工作。\n★ 这句话的意思主要是：",
+                question: "选择正确答案:",
+                options: [
+                    { key: "A", text: "要努力工作", correct: true },
+                    { key: "B", text: "明天会更好", correct: false },
+                    { key: "C", text: "时间过得太快", correct: false }
+                ],
+                explanation: "Peribahasa ini menekankan pentingnya bekerja keras saat ini (要努力工作). Jawaban: A."
+            },
+            {
+                id: 7,
+                prompt: "请大家把黑板上的这些词写在本子上，回家后用这些词语写一个小故事。\n★ 说话人最可能是做什么的？",
+                question: "选择正确答案:",
+                options: [
+                    { key: "A", text: "老师", correct: true },
+                    { key: "B", text: "学生", correct: false },
+                    { key: "C", text: "经理", correct: false }
+                ],
+                explanation: "Orang yang menyuruh menulis di papan tulis dan memberi PR adalah guru (老师). Jawaban: A."
+            },
+            {
+                id: 8,
+                prompt: "我对这儿很满意，虽然没有花园，但是离河边很近... 空气新鲜。\n★ 使他觉得满意的是：",
+                question: "选择正确答案:",
+                options: [
+                    { key: "A", text: "没有花园", correct: false },
+                    { key: "B", text: "房间很大", correct: false },
+                    { key: "C", text: "离河很近", correct: true }
+                ],
+                explanation: "Teks menyatakan kepuasan karena dekat dengan sungai (离河边很近). Jawaban: C."
+            },
+            {
+                id: 9,
+                prompt: "小刘是一位小学老师，教三年级的数学，他虽然很年轻，但是课讲得很好，同学们都很喜欢他。\n★ 学生为什么喜欢刘老师？",
+                question: "选择正确答案:",
+                options: [
+                    { key: "A", text: "很年轻", correct: false },
+                    { key: "B", text: "课讲得好", correct: true },
+                    { key: "C", text: "对学生要求高", correct: false }
+                ],
+                explanation: "Murid menyukainya karena mengajarnya sangat bagus (课讲得好). Jawaban: B."
+            },
+            {
+                id: 10,
+                prompt: "今天12号了，晚上陈阿姨要来家里... 没有水果了，你去买些香蕉、葡萄吧。\n★ 家里需要买什么？",
+                question: "选择正确答案:",
+                options: [
+                    { key: "A", text: "鸡蛋", correct: false },
+                    { key: "B", text: "水果", correct: true },
+                    { key: "C", text: "果汁", correct: false }
+                ],
+                explanation: "Teks menyebutkan rumah kehabisan buah (没有水果了) dan perlu membeli pisang/anggur. Jawaban: B."
+            }
+        ];
+
+        // 3. WRITING DATA (10 Soal - Bobot 100 Poin = 10 Poin / Soal)
+        const writingQuestions = [
+            {
+                id: 1,
+                type: "reorder",
+                words: ["弟弟", "笑了", "高兴地"],
+                correctOrder: ["弟弟", "高兴地", "笑了"],
+                pinyin: "Dìdi gāoxìng de xiào le.",
+                meaning: "Adik laki-laki tersenyum dengan gembira.",
+                explanation: "Struktur: Subjek (弟弟) + Kata Keterangan (高兴地) + Kata Kerja (笑了)."
+            },
+            {
+                id: 2,
+                type: "reorder",
+                words: ["简单", "上午的考试", "比较"],
+                correctOrder: ["上午的考试", "比较", "简单"],
+                pinyin: "Shàngwǔ de kǎoshì bǐjiào jiǎndān.",
+                meaning: "Ujian tadi pagi relatif mudah.",
+                explanation: "Subjek (上午的考试) + Adverb (比较) + Adjective (简单)."
+            },
+            {
+                id: 3,
+                type: "reorder",
+                words: ["越来越好", "变得", "这个城市的环境了"],
+                correctOrder: ["这个城市的环境", "变得", "越来越好", "了"],
+                pinyin: "Zhè gè chéngshì de huánjìng biàn de yuè lái yuè hǎo le.",
+                meaning: "Lingkungan kota ini telah menjadi semakin baik.",
+                explanation: "Subjek (这个城市的环境) + Verb/Compl (变得) + (越来越好了)."
+            },
+            {
+                id: 4,
+                type: "reorder",
+                words: ["送给他", "那位", "医生", "一个礼物"],
+                correctOrder: ["那位", "医生", "送给他", "一个礼物"],
+                pinyin: "Nà wèi yīshēng sòng gěi tā yí gè lǐwù.",
+                meaning: "Dokter itu memberinya sebuah hadiah.",
+                explanation: "Subjek (那位医生) + Predikat (送给他) + Objek (一个礼物)."
+            },
+            {
+                id: 5,
+                type: "reorder",
+                words: ["其他班的成绩", "有", "也", "很大", "提高"],
+                correctOrder: ["其他班的成绩", "也", "有", "很大", "提高"],
+                pinyin: "Qítā bān de chéngjì yě yǒu hěn dà tígāo.",
+                meaning: "Nilai kelas lain juga mengalami peningkatan besar.",
+                explanation: "Subjek (其他班的成绩) + 也 + 有 + 很大提高."
+            },
+            {
+                id: 6,
+                type: "pinyin_fill",
+                prompt: "医院离这儿很远，我们坐 ( chū / 出 ) 租车去吧。",
+                pinyinHint: "chū",
+                answer: "出",
+                meaning: "Rumah sakit sangat jauh dari sini, mari kita naik taksi (出租车).",
+                explanation: "Pinyin 'chū' dalam 出租车 adalah 出."
+            },
+            {
+                id: 7,
+                type: "pinyin_fill",
+                prompt: "一 ( yuán / 元 ) 是10角，一角是10分。",
+                pinyinHint: "yuán",
+                answer: "元",
+                meaning: "Satu yuan (元) adalah 10 jiao.",
+                explanation: "Mata uang Yuan Mandarin ditulis 元."
+            },
+            {
+                id: 8,
+                type: "pinyin_fill",
+                prompt: "我不认识他，你知道他姓什么、( jiào / 叫 ) 什么吗？",
+                pinyinHint: "jiào",
+                answer: "叫",
+                meaning: "Saya tidak kenal dia, apakah kamu tahu marganya apa dan dipanggil (叫) apa?",
+                explanation: "Kata dipanggil/bernama adalah 叫."
+            },
+            {
+                id: 9,
+                type: "pinyin_fill",
+                prompt: "( Zhōng / 中 ) 间穿红裙子的一定是他妹妹。",
+                pinyinHint: "Zhōng",
+                answer: "中",
+                meaning: "Yang di tengah (中间) memakai rok merah pasti adiknya.",
+                explanation: "Pinyin 'zhōng' dalam 中间 adalah 中."
+            },
+            {
+                id: 10,
+                type: "pinyin_fill",
+                prompt: "我已经饱了，不想吃 ( mǐ / 米 ) 饭了。",
+                pinyinHint: "mǐ",
+                answer: "米",
+                meaning: "Saya sudah kenyang, tidak ingin makan nasi (米饭) lagi.",
+                explanation: "Nasi putih dalam Mandarin adalah 米饭 (mǐfàn)."
+            }
+        ];
+
+        /* ==========================================================================
+           STATE & TIMER CONTROLLER
+           ========================================================================== */
+        let totalScore = 0;
+        let listeningScore = 0;
+        let readingScore = 0;
+        let writingScore = 0;
+
+        let currentListeningIdx = 0;
+        let currentReadingIdx = 0;
+        let currentWritingIdx = 0;
+
+        let readingUnlocked = false;
+        let writingUnlocked = false;
+        let explanationUnlocked = false;
+
+        let timerInterval = null;
+        let currentTimerSeconds = 35 * 60; // 35 Mins Default for Listening
+
+        let selectedWritingWords = [];
+        let isListeningTextVisible = false;
+        let isAnswered = false; // Flag untuk mencegah skor bertambah lebih dari 1x per soal
+
+        window.onload = function() {
+            startTimer(35 * 60); // Start 35 min timer
+            renderListeningQuestion();
+        };
+
+        function startTimer(seconds) {
+            clearInterval(timerInterval);
+            currentTimerSeconds = seconds;
+            updateTimerDisplay();
+
+            timerInterval = setInterval(() => {
+                currentTimerSeconds--;
+                updateTimerDisplay();
+
+                if (currentTimerSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    showModal("⏰ WAKTU HABIS!", "Waktu untuk bagian ini telah habis. Lanjut ke bagian berikutnya!", "⌛");
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(currentTimerSeconds / 60);
+            const secs = currentTimerSeconds % 60;
+            document.getElementById('timer-text').innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        /* ==========================================================================
+           AUDIO SYNTHESIZER (TTS)
+           ========================================================================== */
+        function speakChinese(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 0.85; // Kecepatan disesuaikan untuk siswa SMP
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("Browser tidak mendukung Text-To-Speech.");
+            }
+        }
+
+        /* ==========================================================================
+           TAB SWITCHING
+           ========================================================================== */
+        function switchTab(tabName) {
+            if (tabName === 'reading' && !readingUnlocked) {
+                showModal("🔒 Modul Terkunci!", "Selesaikan semua soal 听力 (Listening) untuk membuka tab 阅读 (Reading)!", "❌");
+                return;
+            }
+            if (tabName === 'writing' && !writingUnlocked) {
+                showModal("🔒 Modul Terkunci!", "Selesaikan semua soal 阅读 (Reading) untuk membuka tab 书写 (Writing)!", "❌");
+                return;
+            }
+
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(`content-${tabName}`).classList.remove('hidden');
+            document.getElementById(`content-${tabName}`).classList.add('flex');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            if (tabName === 'listening') {
+                renderListeningQuestion();
+            } else if (tabName === 'reading') {
+                startTimer(30 * 60); // 30 Mins for Reading
+                renderReadingQuestion();
+            } else if (tabName === 'writing') {
+                startTimer(10 * 60); // 10 Mins for Writing
+                renderWritingQuestion();
+            } else if (tabName === 'explanation') {
+                clearInterval(timerInterval);
+                document.getElementById('timer-text').innerText = "SELESAI";
+                renderExplanationView();
+            }
+        }
+
+        /* ==========================================================================
+           LISTENING LOGIC WITH AUDIO & HIDDEN / SHOW TEXT
+           ========================================================================== */
+        function renderListeningQuestion() {
+            const q = listeningQuestions[currentListeningIdx];
+            document.getElementById('listening-q-num').innerText = currentListeningIdx + 1;
+
+            const container = document.getElementById('listening-q-container');
+            const optionsContainer = document.getElementById('listening-options');
+            const nextBtn = document.getElementById('btn-next-listening');
+
+            isListeningTextVisible = false; // Reset state per question
+            isAnswered = false; // Reset status jawaban
+
+            nextBtn.disabled = true;
+            nextBtn.className = "px-6 py-2.5 bg-gray-300 text-gray-500 font-bold rounded-xl shadow opacity-50 cursor-not-allowed";
+
+            container.innerHTML = `
+                <div class="mb-4 bg-sky-50 p-4 rounded-2xl border border-sky-200">
+                    <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+                        <div class="flex items-center gap-2">
+                            <button onclick="speakChinese('${q.promptText.replace(/\n/g, ' ').replace(/'/g, "\\'")}')" 
+                                class="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl shadow transition flex items-center gap-2 active:scale-95">
+                                <i class="fa-solid fa-volume-high text-lg animate-pulse"></i>
+                                <span>Putar Audio Listening</span>
+                            </button>
+                        </div>
+                        <button onclick="toggleListeningText()" id="btn-toggle-text" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition flex items-center gap-1">
+                            <i class="fa-solid fa-eye"></i> <span id="toggle-text-label">Tampilkan Teks</span>
+                        </button>
+                    </div>
+
+                    <div id="listening-text-box" class="p-3 bg-white/80 rounded-xl border-2 border-dashed border-sky-300 min-h-[60px] flex items-center justify-center">
+                        <p id="listening-text-content" class="text-base font-bold text-slate-800 zh-text whitespace-pre-line leading-relaxed hidden">
+                            ${q.promptText}
+                        </p>
+                        <span id="listening-text-placeholder" class="text-xs text-sky-400 font-medium italic text-center">
+                            🎧 Klik tombol "Putar Audio" di atas untuk mendengarkan, atau tombol "Tampilkan Teks" untuk melihat transkrip.
+                        </span>
+                    </div>
+                </div>
+                <p class="font-bold text-slate-700 mb-2 zh-text">${q.question}</p>
+            `;
+
+            optionsContainer.innerHTML = '';
+            if (q.type === 'tf') {
+                optionsContainer.className = "grid grid-cols-2 gap-4 mt-4";
+                optionsContainer.innerHTML = `
+                    <button onclick="checkListeningTF(true, this)" class="opt-btn p-4 bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-300 rounded-2xl font-black text-emerald-700 text-lg transition">
+                        对 (BENAR)
+                    </button>
+                    <button onclick="checkListeningTF(false, this)" class="opt-btn p-4 bg-rose-50 hover:bg-rose-100 border-2 border-rose-300 rounded-2xl font-black text-rose-700 text-lg transition">
+                        错 (SALAH)
+                    </button>
+                `;
+            } else {
+                optionsContainer.className = "grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4";
+                q.options.forEach((opt, idx) => {
+                    optionsContainer.innerHTML += `
+                        <button onclick="checkListeningMC(${idx}, this)" class="opt-btn p-3 bg-slate-50 hover:bg-sky-50 border-2 border-slate-200 hover:border-sky-300 rounded-xl text-left font-bold transition flex items-center gap-2">
+                            <span class="w-7 h-7 bg-sky-500 text-white rounded-lg flex items-center justify-center text-sm font-bold shrink-0">${opt.key}</span>
+                            <span class="zh-text text-base">${opt.text}</span>
+                        </button>
+                    `;
+                });
+            }
+        }
+
+        function disableAllOptions(selectedBtn) {
+            const buttons = document.querySelectorAll('.opt-btn');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                btn.classList.remove('hover:bg-sky-50', 'hover:bg-amber-50', 'hover:bg-emerald-100', 'hover:bg-rose-100');
+            });
+            if (selectedBtn) {
+                selectedBtn.classList.remove('opacity-50');
+                selectedBtn.classList.add('ring-4', 'ring-sky-400');
+            }
+        }
+
+        function checkListeningTF(userAns, btnEl) {
+            if (isAnswered) return;
+            isAnswered = true;
+            disableAllOptions(btnEl);
+
+            const q = listeningQuestions[currentListeningIdx];
+            const isCorrect = (userAns === q.answer);
+            if (isCorrect) listeningScore += 10;
+            updateScores();
+            showModal(isCorrect ? "🎉 BENAR! (+10 Poin)" : "❌ KURANG TEPAT", q.explanation, isCorrect ? "✅" : "💡");
+            enableNextButton('btn-next-listening');
+        }
+
+        function checkListeningMC(optIdx, btnEl) {
+            if (isAnswered) return;
+            isAnswered = true;
+            disableAllOptions(btnEl);
+
+            const q = listeningQuestions[currentListeningIdx];
+            const isCorrect = q.options[optIdx].correct;
+            if (isCorrect) listeningScore += 10;
+            updateScores();
+            showModal(isCorrect ? "🎉 BENAR! (+10 Poin)" : "❌ KURANG TEPAT", q.explanation, isCorrect ? "✅" : "💡");
+            enableNextButton('btn-next-listening');
+        }
+
+        function nextListeningQuestion() {
+            if (currentListeningIdx < listeningQuestions.length - 1) {
+                currentListeningIdx++;
+                renderListeningQuestion();
+            } else {
+                readingUnlocked = true;
+                document.getElementById('tab-reading').classList.remove('locked');
+                document.getElementById('icon-reading').className = "fa-solid fa-circle-play text-xl";
+                showModal("🏆 Modul Listening Selesai!", "Skor Listening kamu: " + listeningScore + "/100. Tab 阅读 (Reading) dibuka!", "📖");
+                switchTab('reading');
+            }
+        }
+
+        /* ==========================================================================
+           READING LOGIC
+           ========================================================================== */
+        function renderReadingQuestion() {
+            const q = readingQuestions[currentReadingIdx];
+            document.getElementById('reading-q-num').innerText = currentReadingIdx + 1;
+
+            const container = document.getElementById('reading-q-container');
+            const optionsContainer = document.getElementById('reading-options');
+            const nextBtn = document.getElementById('btn-next-reading');
+
+            isAnswered = false; // Reset status jawaban
+
+            nextBtn.disabled = true;
+            nextBtn.className = "px-6 py-2.5 bg-gray-300 text-gray-500 font-bold rounded-xl shadow opacity-50 cursor-not-allowed";
+
+            container.innerHTML = `
+                <div class="mb-4 bg-amber-50 p-4 rounded-2xl border border-amber-200">
+                    <p class="text-lg font-bold text-slate-800 zh-text leading-relaxed">${q.prompt}</p>
+                </div>
+                <p class="font-bold text-slate-700 mb-2 zh-text">${q.question}</p>
+            `;
+
+            optionsContainer.className = "grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4";
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach((opt, idx) => {
+                optionsContainer.innerHTML += `
+                    <button onclick="checkReadingMC(${idx}, this)" class="opt-btn p-3 bg-slate-50 hover:bg-amber-50 border-2 border-slate-200 hover:border-amber-300 rounded-xl text-left font-bold transition flex items-center gap-2">
+                        <span class="w-7 h-7 bg-amber-500 text-white rounded-lg flex items-center justify-center text-sm font-bold shrink-0">${opt.key}</span>
+                        <span class="zh-text text-base">${opt.text}</span>
+                    </button>
+                `;
+            });
+        }
+
+        function checkReadingMC(optIdx, btnEl) {
+            if (isAnswered) return;
+            isAnswered = true;
+            disableAllOptions(btnEl);
+
+            const q = readingQuestions[currentReadingIdx];
+            const isCorrect = q.options[optIdx].correct;
+            if (isCorrect) readingScore += 10;
+            updateScores();
+            showModal(isCorrect ? "🎉 BENAR! (+10 Poin)" : "❌ KURANG TEPAT", q.explanation, isCorrect ? "✅" : "💡");
+            enableNextButton('btn-next-reading');
+        }
+
+        function nextReadingQuestion() {
+            if (currentReadingIdx < readingQuestions.length - 1) {
+                currentReadingIdx++;
+                renderReadingQuestion();
+            } else {
+                writingUnlocked = true;
+                document.getElementById('tab-writing').classList.remove('locked');
+                document.getElementById('icon-writing').className = "fa-solid fa-circle-play text-xl";
+                showModal("🏆 Modul Reading Selesai!", "Skor Reading kamu: " + readingScore + "/100. Tab 书写 (Writing) dibuka!", "✍️");
+                switchTab('writing');
+            }
+        }
+
+        /* ==========================================================================
+           WRITING LOGIC
+           ========================================================================== */
+        function renderWritingQuestion() {
+            const q = writingQuestions[currentWritingIdx];
+            document.getElementById('writing-q-num').innerText = currentWritingIdx + 1;
+
+            const container = document.getElementById('writing-q-container');
+            const area = document.getElementById('writing-interactive-area');
+            const nextBtn = document.getElementById('btn-next-writing');
+
+            isAnswered = false; // Reset status jawaban
+
+            nextBtn.disabled = true;
+            nextBtn.className = "px-6 py-2.5 bg-gray-300 text-gray-500 font-bold rounded-xl shadow opacity-50 cursor-not-allowed";
+
+            container.innerHTML = `<p class="font-bold text-purple-800 text-sm mb-2">Soal #${currentWritingIdx + 1}</p>`;
+            area.innerHTML = '';
+
+            if (q.type === 'reorder') {
+                selectedWritingWords = [];
+                const shuffled = [...q.words].sort(() => Math.random() - 0.5);
+
+                area.innerHTML = `
+                    <p class="text-sm font-bold text-slate-700 mb-2">Susun kata berikut menjadi kalimat yang benar:</p>
+                    <div id="reorder-target" class="min-h-[50px] p-3 bg-purple-50 rounded-2xl border-2 border-dashed border-purple-300 flex flex-wrap gap-2 items-center mb-4">
+                        <span class="text-xs text-purple-400 italic" id="reorder-placeholder">Klik pilihan frasa di bawah...</span>
+                    </div>
+
+                    <div id="reorder-source" class="flex flex-wrap gap-2 mb-4">
+                        ${shuffled.map((word) => `
+                            <button onclick="pickWord('${word.replace(/'/g, "\\'")}', this)" class="opt-word-btn px-4 py-2 bg-white hover:bg-purple-100 border-2 border-purple-200 text-purple-900 font-bold rounded-xl text-lg zh-text shadow-sm transition">
+                                ${word}
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button id="btn-reset-writing" onclick="renderWritingQuestion()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl">Reset</button>
+                        <button id="btn-check-writing" onclick="checkReorderAnswer(this)" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm rounded-xl shadow">Periksa Jawaban</button>
+                    </div>
+                `;
+            } else if (q.type === 'pinyin_fill') {
+                area.innerHTML = `
+                    <div class="p-4 bg-purple-50 rounded-2xl border border-purple-200 mb-4 text-center">
+                        <p class="text-xl font-black text-slate-800 zh-text mb-2">${q.prompt}</p>
+                        <span class="text-xs font-bold text-purple-600 bg-white px-3 py-1 rounded-full border border-purple-200">Pinyin Hint: ${q.pinyinHint}</span>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-center gap-3 justify-center">
+                        <input type="text" id="pinyin-input" placeholder="Ketik Hanzi..." 
+                            class="w-full sm:w-48 p-3 text-center text-xl font-bold zh-text border-2 border-purple-300 rounded-xl focus:border-purple-600 focus:outline-none">
+                        <button id="btn-check-pinyin" onclick="checkPinyinInput(this)" class="w-full sm:w-auto px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow">
+                            Periksa Hanzi
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function checkReorderAnswer(checkBtn) {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            if (checkBtn) checkBtn.disabled = true;
+            const resetBtn = document.getElementById('btn-reset-writing');
+            if (resetBtn) resetBtn.disabled = true;
+
+            document.querySelectorAll('.opt-word-btn').forEach(btn => btn.disabled = true);
+
+            const q = writingQuestions[currentWritingIdx];
+            const isCorrect = JSON.stringify(selectedWritingWords) === JSON.stringify(q.correctOrder);
+            if (isCorrect) writingScore += 10;
+            updateScores();
+            showModal(isCorrect ? "🎉 BENAR! (+10 Poin)" : "❌ KURANG TEPAT", q.explanation, isCorrect ? "✅" : "💡");
+            enableNextButton('btn-next-writing');
+        }
+
+        function checkPinyinInput(checkBtn) {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            const inputEl = document.getElementById('pinyin-input');
+            if (inputEl) inputEl.disabled = true;
+            if (checkBtn) checkBtn.disabled = true;
+
+            const q = writingQuestions[currentWritingIdx];
+            const val = inputEl ? inputEl.value.trim() : '';
+            const isCorrect = (val === q.answer);
+            if (isCorrect) writingScore += 10;
+            updateScores();
+            showModal(isCorrect ? "🎉 BENAR! (+10 Poin)" : "❌ KURANG TEPAT", q.explanation, isCorrect ? "✅" : "💡");
+            enableNextButton('btn-next-writing');
+        }
+
+        function nextWritingQuestion() {
+            if (currentWritingIdx < writingQuestions.length - 1) {
+                currentWritingIdx++;
+                renderWritingQuestion();
+            } else {
+                explanationUnlocked = true;
+                document.getElementById('tab-explanation').hidden = false;
+                confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+                showModal("🎓 UJIAN SELESAI!", "Seluruh modul tes HSK 3 telah diselesaikan!", "🏆");
+                switchTab('explanation');
+            }
+        }
+
+        /* ==========================================================================
+           EXPLANATION VIEW
+           ========================================================================== */
+        function renderExplanationView() {
+            const container = document.getElementById('explanation-list');
+            container.innerHTML = '';
+
+            let html = `
+                <div class="bg-white p-4 rounded-2xl border-2 border-sky-200 shadow-sm mb-4">
+                    <h4 class="text-base font-black text-sky-700 mb-2">听力 Pembahasan (Listening)</h4>
+            `;
+            listeningQuestions.forEach((q, i) => {
+                html += `
+                    <div class="p-3 bg-sky-50 rounded-xl mb-2 text-xs">
+                        <p class="font-bold text-slate-800 zh-text">#${i+1}: ${q.promptText || ''}</p>
+                        ${q.pinyin ? `<p class="text-sky-600 font-bold">Pinyin: ${q.pinyin}</p>` : ''}
+                        ${q.meaning ? `<p class="text-slate-600 italic">Arti: ${q.meaning}</p>` : ''}
+                        <p class="text-emerald-700 font-bold mt-1">💡 Penjelasan: ${q.explanation}</p>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+
+            html += `
+                <div class="bg-white p-4 rounded-2xl border-2 border-amber-200 shadow-sm mb-4">
+                    <h4 class="text-base font-black text-amber-700 mb-2">阅读 Pembahasan (Reading)</h4>
+            `;
+            readingQuestions.forEach((q, i) => {
+                html += `
+                    <div class="p-3 bg-amber-50 rounded-xl mb-2 text-xs">
+                        <p class="font-bold text-slate-800 zh-text">#${i+1}: ${q.prompt}</p>
+                        ${q.pinyin ? `<p class="text-amber-600 font-bold">Pinyin: ${q.pinyin}</p>` : ''}
+                        <p class="text-emerald-700 font-bold mt-1">💡 Penjelasan: ${q.explanation}</p>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+
+            html += `
+                <div class="bg-white p-4 rounded-2xl border-2 border-purple-200 shadow-sm">
+                    <h4 class="text-base font-black text-purple-700 mb-2">书写 Pembahasan (Writing)</h4>
+            `;
+            writingQuestions.forEach((q, i) => {
+                html += `
+                    <div class="p-3 bg-purple-50 rounded-xl mb-2 text-xs">
+                        <p class="font-bold text-slate-800 zh-text">#${i+1}: ${q.correctOrder ? q.correctOrder.join('') : q.prompt}</p>
+                        ${q.pinyin ? `<p class="text-purple-600 font-bold">Pinyin: ${q.pinyin}</p>` : ''}
+                        ${q.meaning ? `<p class="text-slate-600 italic">Arti: "${q.meaning}"</p>` : ''}
+                        <p class="text-emerald-700 font-bold mt-1">💡 Penjelasan: ${q.explanation}</p>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+
+            container.innerHTML = html;
+        }
+
+        /* ==========================================================================
+           UTILITY FUNCTIONS
+           ========================================================================== */
+        function updateScores() {
+            totalScore = listeningScore + readingScore + writingScore;
+            document.getElementById('current-score').innerText = totalScore;
+            document.getElementById('score-listening-sub').innerText = `${listeningScore} / 100`;
+            document.getElementById('score-reading-sub').innerText = `${readingScore} / 100`;
+            document.getElementById('score-writing-sub').innerText = `${writingScore} / 100`;
+        }
+
+        function enableNextButton(btnId) {
+            const btn = document.getElementById(btnId);
+            btn.disabled = false;
+            btn.className = "px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition transform hover:scale-105 cursor-pointer";
+        }
+
+        function showModal(title, msg, icon) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-msg').innerText = msg;
+            document.getElementById('modal-icon').innerText = icon;
+
+            const modal = document.getElementById('feedback-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('feedback-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    </script>
+</body>
+</html>
